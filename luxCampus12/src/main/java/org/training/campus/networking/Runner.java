@@ -7,7 +7,7 @@ public class Runner {
 	private static final int SERVER_COUNT = 1;
 	private static final int CLIENT_COUNT = 3;
 	private static final int FIRST_SERVER_PORT = 4444;
-	private static final long WORKING_TIME = 20_000;
+	private static final long WORKING_TIME = 10_000;
 	private static final InetAddress SERVER_ADDRESS = InetAddress.getLoopbackAddress();
 
 	public static void main(String[] args) throws InterruptedException {

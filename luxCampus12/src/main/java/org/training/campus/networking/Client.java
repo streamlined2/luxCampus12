@@ -20,12 +20,17 @@ public class Client implements Runnable {
 	private final String message;
 	private final InetAddress serverAddress;
 	private final int port;
+	private volatile boolean proceed = true;
 
 	public Client(int ordinal, String message, InetAddress serverAddress, int port) {
 		this.ordinal = ordinal;
 		this.message = message;
 		this.serverAddress = serverAddress;
 		this.port = port;
+	}
+
+	public void terminate() {
+		proceed = false;
 	}
 
 	@Override
@@ -37,7 +42,7 @@ public class Client implements Runnable {
 			try (Socket socket = new Socket(serverAddress, port);
 					OutputStream os = socket.getOutputStream();
 					InputStream is = socket.getInputStream()) {
-				for (int msgCount = MSG_COUNT; msgCount > 0 && !Thread.interrupted(); msgCount--) {
+				for (int msgCount = MSG_COUNT; msgCount > 0 && proceed && !Thread.interrupted(); msgCount--) {
 					String stimulus = String.format("client #%d (%s): %s", ordinal,
 							DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), message);
 					System.out.println(stimulus);
