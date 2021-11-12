@@ -7,45 +7,49 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 public class Server implements Runnable {
 	private static final int BUFFER_SIZE = 1024;
-	private static final long SLEEP_TIME = 1000;
+	private static final long SLEEP_TIME = 0;
 
-	private final int order;
+	private final int ordinal;
 	private final int port;
 
 	public Server(int order, int port) {
-		this.order = order;
+		this.ordinal = order;
 		this.port = port;
 	}
 
 	@Override
 	public void run() {
+		System.out.printf("server #%d started.%n", ordinal);
 		try (ServerSocket serverSocket = new ServerSocket(port)) {
-			try (Socket socket = serverSocket.accept()) {
-				byte[] buffer = new byte[BUFFER_SIZE];
-				InputStream is = socket.getInputStream();
-				OutputStream os = socket.getOutputStream();
-				while (!Thread.interrupted()) {
-					int size = is.read(buffer, 0, min(BUFFER_SIZE, is.available()));
-					if (size != -1) {
-						String reply = String.format("server %d echoed at %s: %s", order,
-								DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now()),
-								new String(buffer, 0, size));
-						os.write(reply.getBytes());
+			do {
+				try (Socket socket = serverSocket.accept();
+						InputStream is = socket.getInputStream();
+						OutputStream os = socket.getOutputStream()) {
+					byte[] buffer = new byte[BUFFER_SIZE];
+					while (!Thread.interrupted()) {
+						int size = is.read(buffer, 0, min(BUFFER_SIZE, is.available()));
+						if (size > 0) {
+							String reply = String.format("server #%d (%s): %s%n", ordinal,
+									DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()),
+									new String(buffer, 0, size));
+							os.write(reply.getBytes());
+							os.flush();
+						}
+						Thread.sleep(SLEEP_TIME);
 					}
-					Thread.sleep(SLEEP_TIME);
 				}
-			}
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			e.printStackTrace();
+			} while (!Thread.interrupted());
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
+		System.out.printf("server #%d shutdown.%n", ordinal);
 	}
 
 }
