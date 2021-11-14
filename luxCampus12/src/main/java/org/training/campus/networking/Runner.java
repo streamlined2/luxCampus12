@@ -5,58 +5,77 @@ import java.net.InetAddress;
 public class Runner {
 	private static final String CLIENT_MESSAGE = "Hello!";
 	private static final int SERVER_COUNT = 1;
-	private static final int CLIENT_COUNT = 3;
+	private static final int CLIENT_COUNT = 5;
 	private static final int FIRST_SERVER_PORT = 4444;
-	private static final long WORKING_TIME = 10_000;
+	private static final long WORKING_TIME = 20_000;
 	private static final InetAddress SERVER_ADDRESS = InetAddress.getLoopbackAddress();
 
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) {
 		System.out.printf("Simulation started with %d servers and %d clients.%n", SERVER_COUNT, CLIENT_COUNT);
 
-		Thread[] servers = startServers();
-		Thread[] clients = startClients(SERVER_COUNT);
+		Executable[] servers = startServers();
+		Executable[] clients = startClients();
 
-		Thread.sleep(WORKING_TIME);
+		try {
+			System.out.println("Working...");
+			Thread.sleep(WORKING_TIME);
 
-		interruptAll(servers);
-		interruptAll(clients);
+			System.out.println("Terminating clients...");
+			terminateWait(clients);
+			System.out.println("Terminating servers...");
+			terminateWait(servers);
 
-		waitForAll(servers);
-		waitForAll(clients);
+			System.out.println("Simulation stopped.");
 
-		System.out.println("Simulation stopped.");
+		} catch (InterruptedException e) {
+			System.out.println("Simulation failed.");
+			e.printStackTrace();
+		}
+
 	}
 
-	private static Thread[] startClients(int serverCount) {
-		Thread[] clients = new Thread[CLIENT_COUNT];
+	private static Executable[] startClients() {
+		Executable[] clients = new Executable[CLIENT_COUNT];
 		for (int k = 0; k < CLIENT_COUNT; k++) {
-			Client client = new Client(k, CLIENT_MESSAGE, SERVER_ADDRESS, FIRST_SERVER_PORT + k % serverCount);
-			clients[k] = new Thread(client);
-			clients[k].start();
+			Client client = new Client(k, CLIENT_MESSAGE, SERVER_ADDRESS, FIRST_SERVER_PORT + k % SERVER_COUNT);
+			clients[k] = new Executable(new Thread(client), client);
+			clients[k].thread().start();
 		}
 		return clients;
 	}
 
-	private static Thread[] startServers() {
-		Thread[] servers = new Thread[SERVER_COUNT];
+	private static Executable[] startServers() {
+		Executable[] servers = new Executable[SERVER_COUNT];
 		for (int k = 0; k < SERVER_COUNT; k++) {
 			Server server = new Server(k, FIRST_SERVER_PORT + k);
-			servers[k] = new Thread(server);
-			servers[k].start();
+			servers[k] = new Executable(new Thread(server), server);
+			servers[k].thread().start();
 		}
 		return servers;
 	}
 
-	private static void interruptAll(Thread[] threads) {
-		for (int k = 0; k < threads.length; k++) {
-			threads[k].interrupt();
+	private static void terminate(Executable[] execs) {
+		for (Executable ex : execs) {
+			ex.terminable().terminate();
+		}
+		for (Executable ex : execs) {
+			ex.thread().interrupt();
 		}
 	}
 
-	private static void waitForAll(Thread[] threads) throws InterruptedException {
-		for (int k = 0; k < threads.length; k++) {
-			threads[k].join();
+	private static void waitFor(Executable[] execs) {
+		for (Executable ex : execs) {
+			try {
+				ex.thread().join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
+	}
+
+	private static void terminateWait(Executable[] execs) {
+		terminate(execs);
+		waitFor(execs);
 	}
 
 }

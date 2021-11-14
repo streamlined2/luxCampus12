@@ -10,11 +10,11 @@ import java.net.Socket;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-public class Client implements Runnable {
-	private static final int MSG_COUNT = 5;
+public class Client implements Runnable, Terminable {
+	private static final int MSG_COUNT = 100;
 	private static final long SLEEP_TIME = 100;
+	private static final long START_SHIFT_TIME = 500;
 	private static final int BUFFER_SIZE = 1024;
-	private static final long START_SHIFT_TIME = 5000;
 
 	private final int ordinal;
 	private final String message;
@@ -29,6 +29,12 @@ public class Client implements Runnable {
 		this.port = port;
 	}
 
+	@Override
+	public boolean proceed() {
+		return proceed;
+	}
+
+	@Override
 	public void terminate() {
 		proceed = false;
 	}
@@ -36,15 +42,15 @@ public class Client implements Runnable {
 	@Override
 	public void run() {
 		byte[] buffer = new byte[BUFFER_SIZE];
+		System.out.printf("client #%d (%s:%d) started.%n", ordinal, serverAddress.toString(), port);
 		try {
 			Thread.sleep(START_SHIFT_TIME * ordinal);
-			System.out.printf("client #%d (%s:%d) started.%n", ordinal, serverAddress.toString(), port);
 			try (Socket socket = new Socket(serverAddress, port);
 					OutputStream os = socket.getOutputStream();
 					InputStream is = socket.getInputStream()) {
-				for (int msgCount = MSG_COUNT; msgCount > 0 && proceed && !Thread.interrupted(); msgCount--) {
-					String stimulus = String.format("client #%d (%s): %s", ordinal,
-							DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), message);
+				for (int msgCount = 0; msgCount < MSG_COUNT && proceed() && !Thread.interrupted(); msgCount++) {
+					String stimulus = String.format("client #%d (%s): %s (%d)", ordinal,
+							DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), message, msgCount);
 					System.out.println(stimulus);
 					os.write(stimulus.getBytes());
 					os.flush();
@@ -57,11 +63,12 @@ public class Client implements Runnable {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
+				throw new CommunicationException(e);
 			}
-			System.out.printf("client #%d shutdown.%n", ordinal);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
+		System.out.printf("client #%d shutdown.%n", ordinal);
 	}
 
 }
