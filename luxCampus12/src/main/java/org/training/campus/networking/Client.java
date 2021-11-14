@@ -30,7 +30,7 @@ public class Client implements Runnable, Terminable {
 	}
 
 	@Override
-	public boolean proceed() {
+	public boolean isRunning() {
 		return proceed;
 	}
 
@@ -48,7 +48,7 @@ public class Client implements Runnable, Terminable {
 			try (Socket socket = new Socket(serverAddress, port);
 					OutputStream os = socket.getOutputStream();
 					InputStream is = socket.getInputStream()) {
-				for (int msgCount = 0; msgCount < MSG_COUNT && proceed() && !Thread.interrupted(); msgCount++) {
+				for (int msgCount = 0; msgCount < MSG_COUNT && isRunning() && !Thread.interrupted(); msgCount++) {
 					String stimulus = String.format("client #%d (%s): %s (%d)", ordinal,
 							DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), message, msgCount);
 					System.out.println(stimulus);

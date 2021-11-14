@@ -27,7 +27,7 @@ public class Server implements Runnable, Terminable {
 	}
 
 	@Override
-	public boolean proceed() {
+	public boolean isRunning() {
 		return proceed;
 	}
 
@@ -54,11 +54,11 @@ public class Server implements Runnable, Terminable {
 		try {
 			serverSocket = new ServerSocket(port);
 			serverSocket.setSoTimeout(ACCEPT_TIMEOUT);
-			while (proceed() && !Thread.interrupted()) {
+			while (isRunning() && !Thread.interrupted()) {
 				handleRequest();
 			}
 		} catch (IOException e) {
-			if (proceed()) {
+			if (isRunning()) {
 				e.printStackTrace();
 				throw new CommunicationException(e);
 			}
@@ -91,7 +91,7 @@ public class Server implements Runnable, Terminable {
 			System.out.printf("handler #%d of server #%d started.%n", no, ordinal);
 			try (InputStream is = socket.getInputStream(); OutputStream os = socket.getOutputStream()) {
 				byte[] buffer = new byte[BUFFER_SIZE];
-				while (proceed() && !Thread.interrupted()) {
+				while (isAlive() && !Thread.interrupted()) {
 					int size = is.read(buffer, 0, min(BUFFER_SIZE, is.available()));
 					if (size > 0) {
 						String reply = String.format("server #%d, handler #%d (%s): %s%n", ordinal, no,
