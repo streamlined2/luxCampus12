@@ -1,9 +1,12 @@
 package org.training.campus.networking;
 
 import java.net.InetAddress;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class Runner {
-	private static final String CLIENT_MESSAGE = "Hello!";
+	public static final Charset CURRENT_CHARSET = StandardCharsets.UTF_8;
+	private static final String CLIENT_MESSAGE = "Привіт!";
 	private static final int SERVER_COUNT = 1;
 	private static final int CLIENT_COUNT = 5;
 	private static final int FIRST_SERVER_PORT = 4444;

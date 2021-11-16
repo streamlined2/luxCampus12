@@ -1,17 +1,18 @@
 package org.training.campus.networking;
 
-import static java.lang.Math.min;
-
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 public class Client implements Runnable, Terminable {
-	private static final int MSG_COUNT = 100;
+	private static final int MESSAGE_COUNT = 100;
 	private static final long SLEEP_TIME = 100;
 	private static final long START_SHIFT_TIME = 500;
 	private static final int BUFFER_SIZE = 1024;
@@ -41,23 +42,22 @@ public class Client implements Runnable, Terminable {
 
 	@Override
 	public void run() {
-		byte[] buffer = new byte[BUFFER_SIZE];
 		System.out.printf("client #%d (%s:%d) started.%n", ordinal, serverAddress.toString(), port);
 		try {
 			Thread.sleep(START_SHIFT_TIME * ordinal);
 			try (Socket socket = new Socket(serverAddress, port);
-					OutputStream os = socket.getOutputStream();
-					InputStream is = socket.getInputStream()) {
-				for (int msgCount = 0; msgCount < MSG_COUNT && isRunning() && !Thread.interrupted(); msgCount++) {
+					PrintWriter writer = new PrintWriter(new BufferedWriter(
+							new OutputStreamWriter(socket.getOutputStream(), Runner.CURRENT_CHARSET), BUFFER_SIZE));
+					BufferedReader reader = new BufferedReader(
+							new InputStreamReader(socket.getInputStream(), Runner.CURRENT_CHARSET), BUFFER_SIZE)) {
+				for (int msgCount = 0; msgCount < MESSAGE_COUNT && isRunning() && !Thread.interrupted(); msgCount++) {
 					String stimulus = String.format("client #%d (%s): %s (%d)", ordinal,
 							DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), message, msgCount);
 					System.out.println(stimulus);
-					os.write(stimulus.getBytes());
-					os.flush();
-					int size = is.read(buffer, 0, min(BUFFER_SIZE, is.available()));
-					if (size > 0) {
-						String reply = new String(buffer, 0, size);
-						System.out.println(reply);
+					writer.println(stimulus);
+					writer.flush();
+					while (reader.ready()) {
+						System.out.println(reader.readLine());
 					}
 					Thread.sleep(SLEEP_TIME);
 				}

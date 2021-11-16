@@ -1,10 +1,11 @@
 package org.training.campus.networking;
 
-import static java.lang.Math.min;
-
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -89,16 +90,15 @@ public class Server implements Runnable, Terminable {
 		@Override
 		public void run() {
 			System.out.printf("handler #%d of server #%d started.%n", no, ordinal);
-			try (InputStream is = socket.getInputStream(); OutputStream os = socket.getOutputStream()) {
-				byte[] buffer = new byte[BUFFER_SIZE];
+			try (BufferedReader reader = new BufferedReader(
+					new InputStreamReader(socket.getInputStream(), Runner.CURRENT_CHARSET), BUFFER_SIZE);
+					PrintWriter writer = new PrintWriter(new BufferedWriter(
+							new OutputStreamWriter(socket.getOutputStream(), Runner.CURRENT_CHARSET), BUFFER_SIZE))) {
 				while (isRunning() && !Thread.interrupted()) {
-					int size = is.read(buffer, 0, min(BUFFER_SIZE, is.available()));
-					if (size > 0) {
-						String reply = String.format("server #%d, handler #%d (%s): %s%n", ordinal, no,
-								DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), new String(buffer, 0, size));
-						os.write(reply.getBytes());
-						os.flush();
-					}
+					String reply = String.format("server #%d, handler #%d (%s): %s%n", ordinal, no,
+							DateTimeFormatter.ISO_LOCAL_TIME.format(LocalTime.now()), reader.readLine());
+					writer.println(reply);
+					writer.flush();
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
